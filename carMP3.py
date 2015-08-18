@@ -5,10 +5,12 @@ disk for use in a cheapo car MP3 player that doesn't have a random play
 feature.
 
 You need to have the Python 3 pytaglib library and the mp3gain command
-line tool installed.  There are Ubuntu packages for this, python3-taglib and
-mp3gain.
+line tool installed.  There are Ubuntu packages for this, libtag1-dev and
+mp3gain.  Then sudo easy_install3 pytaglib.  (There is an Ubuntu package
+for pytaglib but Eclipse / PyDev doesn't want to play nice with it at the time
+of writing.)  
 
-You'll also need Python 3. Python 3 is good. Python 2 is soooo 2001.
+You'll also need Python 3. Python 3 is good. Python 2 is soooo 2000.
 
 '''
 import copy
@@ -19,7 +21,7 @@ import shutil
 import string
 import subprocess
 import sys
-import taglib  
+import taglib
 import tempfile
 
 
@@ -33,8 +35,6 @@ def main(cardDir):
     tmpDirObj = tempfile.TemporaryDirectory()
     tmpDirName = tmpDirObj.name
     print(tmpDirName)
-    
-    trackListing = ''
     
     # For every file on the Flash drive...
     for file in os.listdir(cardDir):
@@ -53,20 +53,27 @@ def main(cardDir):
             id3r = taglib.File(tmpFile)
             id3r.tags.update(originalTags)
             id3r.save()
-    
-    # Create a text file on the Flash drive that might be useful when
-    # adding tracks at a later date since the file names are going to 
-    # be randomised
-    fhOut = open(cardDir + 'trackListing.txt', 'w')
-    print(trackListing, file=fhOut)
-    fhOut.close()
-    
+
+    trackListing = ''
+   
     # Rename every file in the temporary directory on the hard disk
     # with a randomised 8.3 file name so that the dumb MP3 player doesn't
     # play all the MP3 files in alphanumeric order (no random play feature!)
     for file in os.listdir(tmpDirName):
-        os.rename(tmpDirName + '/' + file, 
-            tmpDirName + '/' + idGenerator(8).lower() + '.mp3')
+        randomisedFileName = idGenerator(8).lower() + '.mp3'
+        tmpFile = tmpDirName + '/' + file
+        id3r = taglib.File(tmpFile)
+        os.rename(tmpFile, tmpDirName + '/' + randomisedFileName)
+        trackListing = trackListing + id3r.tags['ARTIST'][0] + '-' + \
+            id3r.tags['TITLE'][0] + '-' + randomisedFileName + '\n'
+        
+
+    # Create a text file on the Flash drive that might be useful when
+    # adding tracks at a later date since the file names are going to 
+    # be randomised
+    fhOut = open(cardDir + '/' + '000trackListing.txt', 'w')
+    print(trackListing, file=fhOut)
+    fhOut.close()
     
     # Sharp intake of breath - delete all the MP3 files on the Flash drive
     for file in os.listdir(cardDir):
